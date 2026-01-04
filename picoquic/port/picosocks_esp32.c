@@ -52,27 +52,37 @@ int picoquic_get_local_address(SOCKET_TYPE sd, struct sockaddr_storage * addr)
 
 int picoquic_socket_set_pkt_info(SOCKET_TYPE sd, int af)
 {
-    int ret = -1;
+    int ret = 0;
 
     /* ESP-IDF lwIP doesn't support IPv6 packet info, only IPv4 */
     if (af != AF_INET) {
-        return -1;
+        return 0;
     }
 
     int val = 1;
 #ifdef IP_PKTINFO
     ret = setsockopt(sd, IPPROTO_IP, IP_PKTINFO, (char*)&val, sizeof(int));
 #else
+#ifdef IP_RECVDSTADDR
     /* The IP_PKTINFO structure is not defined on BSD */
     ret = setsockopt(sd, IPPROTO_IP, IP_RECVDSTADDR, (char*)&val, sizeof(int));
+#else
+    /* Not supported by this lwIP configuration. */
+    ret = -1;
+#endif
 #endif
 
+    /* Best-effort on ESP32: do not fail socket creation if this is unsupported. */
+    if (ret != 0) {
+        DBG_PRINTF("PKTINFO not available (af=%d), errno: %d\n", af, errno);
+        ret = 0;
+    }
     return ret;
 }
 
 int picoquic_socket_set_ecn_options(SOCKET_TYPE sd, int af, int * recv_set, int * send_set)
 {
-    int ret = -1;
+    int ret = 0;
 
     /* ESP-IDF lwIP doesn't support IPv6 ECN options, skip IPv6 */
     if (af != AF_INET) {
@@ -106,12 +116,10 @@ int picoquic_socket_set_ecn_options(SOCKET_TYPE sd, int af, int * recv_set, int 
             /* Request receiving TOS reports in recvmsg */
             if (setsockopt(sd, IPPROTO_IP, IP_RECVTOS, &set, sizeof(set)) < 0) {
                 DBG_PRINTF("setsockopt IPv4 IP_RECVTOS (0x%x) fails, errno: %d\n", set, errno);
-                ret = -1;
                 *recv_set = 0;
             }
             else {
                 *recv_set = 1;
-                ret = 0;
             }
         }
 #else

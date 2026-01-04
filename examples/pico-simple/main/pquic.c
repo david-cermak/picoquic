@@ -54,6 +54,7 @@
 #include <picoquic_packet_loop.h>
 // #include "picoquic_sample.h"
 #include "picoquic_bbr.h"
+#include "picoquic_esp_log.h"
 #include "esp_log.h"
 
 #define PICOQUIC_SAMPLE_ALPN "picoquic_sample"
@@ -329,11 +330,39 @@ int sample_client_callback(picoquic_cnx_t* cnx,
         case picoquic_callback_stateless_reset:
         case picoquic_callback_close: /* Received connection close */
         case picoquic_callback_application_close: /* Received application close */
-            ESP_LOGI(TAG, "Connection closed.");
+        {
+            uint64_t local_reason = 0, remote_reason = 0;
+            uint64_t local_app_reason = 0, remote_app_reason = 0;
+            uint64_t local_error = picoquic_get_local_error(cnx);
+            uint64_t remote_error = picoquic_get_remote_error(cnx);
+            picoquic_get_close_reasons(cnx, &local_reason, &remote_reason, &local_app_reason, &remote_app_reason);
+
+            ESP_LOGI(TAG, "Connection closed. local=0x%" PRIx64 " (%s) remote=0x%" PRIx64 " (%s) local_app=0x%" PRIx64 " remote_app=0x%" PRIx64,
+                local_reason, picoquic_error_name(local_reason),
+                remote_reason, picoquic_error_name(remote_reason),
+                local_app_reason, remote_app_reason);
+            ESP_LOGI(TAG, "Connection errors. local_error=0x%" PRIx64 " (%s) remote_error=0x%" PRIx64 " (%s)",
+                local_error, picoquic_error_name(local_error),
+                remote_error, picoquic_error_name(remote_error));
+
+            /* If the connection closes before streams finish/reset, mark them as failed so the report is meaningful. */
+            for (sample_client_stream_ctx_t* s = client_ctx->first_stream; s != NULL; s = s->next_stream) {
+                if (!s->is_stream_finished && !s->is_stream_reset) {
+                    s->remote_error = picoquic_get_remote_stream_error(cnx, s->stream_id);
+                    if (s->remote_error == 0) {
+                        /* Fall back to connection close reasons if stream-specific error is not available. */
+                        s->remote_error = (remote_app_reason != 0) ? remote_app_reason : remote_reason;
+                    }
+                    s->is_stream_reset = 1;
+                    client_ctx->nb_files_failed++;
+                }
+            }
+
             /* Mark the connection as completed */
             client_ctx->is_disconnected = 1;
             /* Remove the application callback */
             picoquic_set_callback(cnx, NULL, NULL);
+        }
             break;
         case picoquic_callback_version_negotiation:
             /* The client did not get the right version.
@@ -494,6 +523,8 @@ static int sample_client_init(char const* server_name, int server_port, char con
             picoquic_set_default_congestion_algorithm(*quic, picoquic_bbr_algorithm);
             /* Intentionally not enabling keylog/qlog here (they typically write to files). */
             picoquic_set_log_level(*quic, 1);
+            /* Enable picoquic internal logs and route them to ESP_LOGx() */
+            (void)picoquic_set_esp_log(*quic, TAG, 1 /* log_packets */);
         }
     }
     /* Initialize the callback context and create the connection context.
@@ -584,6 +615,9 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
 
     /* Wait for packets */
     ret = picoquic_packet_loop(quic, 0, server_address.ss_family, 0, 0, 0, sample_client_loop_cb, &client_ctx);
+    if (ret != 0) {
+        ESP_LOGW(TAG, "picoquic_packet_loop returned %d (%s)", ret, picoquic_error_name((uint64_t)ret));
+    }
 
     /* Done. At this stage, we could print out statistics, etc. */
     sample_client_report(&client_ctx);
@@ -599,19 +633,20 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
     return ret;
 }
 
+// int main(void)
 void app_main(void)
 {
 
     printf("app_main\n");
         // Initialize ESP-IDF components
-        // ESP_ERROR_CHECK(nvs_flash_init());
-        // ESP_ERROR_CHECK(esp_netif_init());
-        // ESP_ERROR_CHECK(esp_event_loop_create_default());
-        // ESP_ERROR_CHECK(example_connect());
-// #define NAME "192.168.0.37"
-// #define PORT 1234
-#define NAME "127.0.0.1"
-#define PORT 4433
+        ESP_ERROR_CHECK(nvs_flash_init());
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(esp_event_loop_create_default());
+        ESP_ERROR_CHECK(example_connect());
+#define NAME "192.168.0.37"
+#define PORT 1234
+// #define NAME "127.0.0.1"
+// #define PORT 4433
     static const char* file_names[] = { "index.htm" };
     (void)picoquic_sample_client(NAME, PORT, ".", 1, file_names);
 }
