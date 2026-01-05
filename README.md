@@ -5,7 +5,11 @@ Initial QUIC work for ESP-IDF, with **two QUIC backends** and a small set of run
 ### QUIC backends
 
 - **picoquic** (C): the original focus of this repo (initial port/integration to ESP-IDF)
+    - https://github.com/private-octopus/picoquic
+    - https://github.com/h2o/picotls
 - **esp-http3** (C++): QUIC + HTTP/3 client that can also run as “plain QUIC” for non-HTTP protocols (e.g. MQTT)
+    - https://github.com/78/esp-http3
+
 
 ### Examples
 

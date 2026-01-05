@@ -30,6 +30,6 @@ jobs:
             idf.py --preview set-target linux
             idf.py build
             ./build/pico-mqtt.elf
+            cd ../mqtt
+            idf.py build
           fi
-          cd ../mqtt
-          idf.py build
