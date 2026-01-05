@@ -30,6 +30,9 @@ jobs:
             idf.py --preview set-target linux
             idf.py build
             ./build/pico-mqtt.elf
+            # build esp-http3 example
             cd ../mqtt
+            idf.py --preview set-target linux
             idf.py build
+            timeout 10 ./build/mqtt.elf || true
           fi
