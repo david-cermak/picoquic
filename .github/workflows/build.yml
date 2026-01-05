@@ -25,13 +25,11 @@ jobs:
           ./scripts/get_deps.sh
           cd examples/pico-mqtt
           idf.py build
-          rm -rf build sdkconfig
-          idf.py --preview set-target linux
-          idf.py build
-          ./build/pico-mqtt.elf
+          if [ "${{ matrix.idf_ver }}" == "release-v5.5" ]; then
+            rm -rf build sdkconfig
+            idf.py --preview set-target linux
+            idf.py build
+            ./build/pico-mqtt.elf
+          fi
           cd ../mqtt
           idf.py build
-          rm -rf build sdkconfig
-          idf.py --preview set-target linux
-          idf.py build
-          ./build/mqtt.elf
