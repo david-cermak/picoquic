@@ -1,171 +1,122 @@
 #include <stdio.h>
 #include <string.h>
-#include <errno.h>
 
-#include "esp_http3.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_timer.h"
+#include "mqtt_client.h"
+#include "mqtt_quic_transport.h"
 #include "protocol_examples_common.h"
+#include "esp_netif.h"
 
-#include "sys/socket.h"
-#include "netdb.h"
-#include "errno.h"
-#include "fcntl.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #define TAG "mqtt"
+
+static volatile bool s_connected = false;
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
+{
+    ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32, base, event_id);
+    esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+    switch ((esp_mqtt_event_id_t)event_id) {
+    case MQTT_EVENT_CONNECTED:
+        s_connected = true;
+        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+        msg_id = esp_mqtt_client_subscribe(client, "topic/qos0", 0);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+
+        msg_id = esp_mqtt_client_subscribe(client, "topic/qos1", 1);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+
+        msg_id = esp_mqtt_client_unsubscribe(client, "topic/qos1");
+        ESP_LOGI(TAG, "sent unsubscribe successful, msg_id=%d", msg_id);
+        break;
+    case MQTT_EVENT_DISCONNECTED:
+        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+        s_connected = false;
+        break;
+
+    case MQTT_EVENT_SUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d, return code=0x%02x ", event->msg_id, (uint8_t)*event->data);
+        msg_id = esp_mqtt_client_publish(client, "topic/qos0", "data", 0, 0, 0);
+        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+        break;
+    case MQTT_EVENT_UNSUBSCRIBED:
+        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_PUBLISHED:
+        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        break;
+    case MQTT_EVENT_DATA:
+        ESP_LOGI(TAG, "MQTT_EVENT_DATA");
+        printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+        printf("DATA=%.*s\r\n", event->data_len, event->data);
+        break;
+    case MQTT_EVENT_ERROR:
+        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+        break;
+    default:
+        ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+        break;
+    }
+}
 
 extern "C" void app_main(void)
 {
 
         // Initialize ESP-IDF components
         ESP_ERROR_CHECK(nvs_flash_init());
-        // ESP_ERROR_CHECK(esp_netif_init());
         ESP_ERROR_CHECK(esp_event_loop_create_default());
-        // ESP_ERROR_CHECK(example_connect());
+#if !defined(CONFIG_IDF_TARGET_LINUX)
+        ESP_ERROR_CHECK(esp_netif_init());
+        ESP_ERROR_CHECK(example_connect());
+#endif        
 
-        // MQTT-over-QUIC test: connect to broker.emqx.io:14567 using ALPN "mqtt"
+        // MQTT-over-QUIC (esp-mqtt + custom esp_transport): connect to broker.emqx.io:14567 using ALPN "mqtt"
         static constexpr const char* kHost = "broker.emqx.io";
-        static constexpr const char* kPortStr = "14567";
         static constexpr uint16_t kPort = 14567;
 
-        // Resolve hostname
-        struct addrinfo hints;
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_DGRAM;
-
-        struct addrinfo* res = nullptr;
-        int err = getaddrinfo(kHost, kPortStr, &hints, &res);
-        if (err != 0 || res == nullptr) {
-                ESP_LOGE(TAG, "getaddrinfo(%s:%s) failed: err=%d", kHost, kPortStr, err);
+        // Create custom QUIC-backed esp_transport and hand it to esp-mqtt
+        esp_transport_handle_t quic_transport = esp_transport_quic_mqtt_init();
+        if (!quic_transport) {
+                ESP_LOGE(TAG, "failed to create QUIC transport");
                 return;
         }
 
-        int sock = socket(res->ai_family, res->ai_socktype, 0);
-        if (sock < 0) {
-                ESP_LOGE(TAG, "socket() failed: errno=%d", errno);
-                freeaddrinfo(res);
+        esp_mqtt_client_config_t mqtt_config = {};
+        mqtt_config.broker.address.hostname = kHost;
+        mqtt_config.broker.address.port = kPort;
+        mqtt_config.broker.address.transport = MQTT_TRANSPORT_OVER_TCP; // scheme selection only; actual IO comes from network.transport
+        mqtt_config.credentials.client_id = "esp-quic";
+        mqtt_config.session.protocol_ver = MQTT_PROTOCOL_V_3_1_1;
+        mqtt_config.session.keepalive = 60;
+        mqtt_config.network.timeout_ms = 10000;
+        mqtt_config.network.transport = quic_transport;
+
+        esp_mqtt_client_handle_t mqtt_client = esp_mqtt_client_init(&mqtt_config);
+        if (!mqtt_client) {
+                ESP_LOGE(TAG, "esp_mqtt_client_init failed");
+                esp_transport_destroy(quic_transport);
                 return;
         }
+        ESP_ERROR_CHECK(esp_mqtt_client_register_event(mqtt_client, MQTT_EVENT_ANY, mqtt_event_handler, nullptr));
+        ESP_ERROR_CHECK(esp_mqtt_client_start(mqtt_client));
 
-        if (connect(sock, res->ai_addr, res->ai_addrlen) != 0) {
-                ESP_LOGE(TAG, "connect() failed: errno=%d", errno);
-                close(sock);
-                freeaddrinfo(res);
-                return;
-        }
-        freeaddrinfo(res);
-
-        // Non-blocking receive loop
-        int flags = fcntl(sock, F_GETFL, 0);
-        if (flags >= 0) {
-                (void)fcntl(sock, F_SETFL, flags | O_NONBLOCK);
-        }
-
-        // Configure QUIC connection
-        esp_http3::QuicConfig qc;
-        qc.hostname = kHost;
-        qc.port = kPort;
-        qc.alpn = "mqtt";
-        qc.enable_http3 = false;  // critical: don't send any HTTP/3 control/settings bytes
-        qc.enable_debug = false;
-
-        volatile bool connected = false;
-        volatile bool got_any_data = false;
-
-        esp_http3::QuicConnection conn(
-                [sock](const uint8_t* data, size_t len) -> int {
-                        int n = send(sock, data, len, 0);
-                        return (n < 0) ? -1 : n;
-                },
-                qc);
-
-        conn.SetOnConnected([&]() {
-                ESP_LOGI(TAG, "QUIC connected (ALPN=mqtt)");
-                connected = true;
-        });
-        conn.SetOnDisconnected([&](int code, const std::string& reason) {
-                ESP_LOGE(TAG, "QUIC disconnected: code=%d reason=%s", code, reason.c_str());
-        });
-        conn.SetOnStreamData([&](int stream_id, const uint8_t* data, size_t len, bool fin) {
-                got_any_data = true;
-                ESP_LOGI(TAG, "RX stream=%d len=%u fin=%d", stream_id, (unsigned)len, fin ? 1 : 0);
-                // Print first few bytes as hex (good enough to spot CONNACK: 20 02 00 00)
-                char line[128];
-                size_t n = (len > 16) ? 16 : len;
-                size_t off = 0;
-                for (size_t i = 0; i < n && off + 3 < sizeof(line); i++) {
-                        off += snprintf(line + off, sizeof(line) - off, "%02X ", data[i]);
-                }
-                line[off] = 0;
-                ESP_LOGI(TAG, "RX bytes (first %u): %s", (unsigned)n, line);
-        });
-
-        if (!conn.StartHandshake()) {
-                ESP_LOGE(TAG, "StartHandshake failed");
-                close(sock);
-                return;
-        }
-
-        // Pump UDP receive + timer until connected or timeout
-        uint8_t rxbuf[1500];
+        // Wait for CONNECT/CONNACK
         const uint64_t start_ms = esp_timer_get_time() / 1000;
-        while (!connected) {
-                const uint64_t now_ms = esp_timer_get_time() / 1000;
-                if (now_ms - start_ms > qc.handshake_timeout_ms + 2000) {
-                        ESP_LOGE(TAG, "Handshake timeout");
-                        close(sock);
-                        return;
-                }
-
-                int r = recv(sock, rxbuf, sizeof(rxbuf), 0);
-                if (r > 0) {
-                        conn.ProcessReceivedData(rxbuf, (size_t)r);
-                }
-
-                conn.OnTimerTick(50);
+        while (!s_connected && (esp_timer_get_time() / 1000) - start_ms < 8000) {
                 vTaskDelay(pdMS_TO_TICKS(50));
         }
-
-        // Open a raw stream and send a raw MQTT CONNECT packet (MQTT 3.1.1)
-        const int stream_id = conn.OpenBidirectionalStream();
-        if (stream_id < 0) {
-                ESP_LOGE(TAG, "OpenBidirectionalStream failed");
-                close(sock);
-                return;
-        }
-
-        // MQTT CONNECT:
-        // Fixed header: 0x10, remaining length 0x14 (20)
-        // Variable header: 00 04 'M' 'Q' 'T' 'T' 04 02 00 3C
-        // Payload: 00 08 'e' 's' 'p' '-' 'q' 'u' 'i' 'c'
-        static const uint8_t mqtt_connect[] = {
-                0x10, 0x14,
-                0x00, 0x04, 'M', 'Q', 'T', 'T',
-                0x04,
-                0x02,
-                0x00, 0x3C,
-                0x00, 0x08, 'e', 's', 'p', '-', 'q', 'u', 'i', 'c',
-        };
-
-        ssize_t sent = conn.WriteStreamRaw(stream_id, mqtt_connect, sizeof(mqtt_connect));
-        ESP_LOGI(TAG, "Sent MQTT CONNECT over QUIC: stream=%d bytes=%d", stream_id, (int)sent);
-
-        // Wait briefly for any response bytes (ideally CONNACK)
-        const uint64_t wait_start_ms = esp_timer_get_time() / 1000;
-        while ((esp_timer_get_time() / 1000) - wait_start_ms < 3000 && !got_any_data) {
-                int r = recv(sock, rxbuf, sizeof(rxbuf), 0);
-                if (r > 0) {
-                        conn.ProcessReceivedData(rxbuf, (size_t)r);
-                }
-                conn.OnTimerTick(50);
-                vTaskDelay(pdMS_TO_TICKS(50));
-        }
-
-        if (!got_any_data) {
-                ESP_LOGW(TAG, "No response bytes observed yet (connection still may be OK)");
+        if (!s_connected) {
+                ESP_LOGW(TAG, "MQTT not connected yet (timeout waiting for CONNECT)");
+        } else {
+                int msg_id = esp_mqtt_client_publish(mqtt_client, "/pquic/test", "hello over quic", 0, 0, 0);
+                ESP_LOGI(TAG, "published msg_id=%d", msg_id);
         }
 
         // Keep connection alive for a bit so we can see whether it stays up.
@@ -173,15 +124,10 @@ extern "C" void app_main(void)
         ESP_LOGI(TAG, "Holding connection open for 15 seconds...");
         const uint64_t hold_start_ms = esp_timer_get_time() / 1000;
         while ((esp_timer_get_time() / 1000) - hold_start_ms < 15000) {
-                int r = recv(sock, rxbuf, sizeof(rxbuf), 0);
-                if (r > 0) {
-                        conn.ProcessReceivedData(rxbuf, (size_t)r);
-                }
-                conn.OnTimerTick(100);
                 vTaskDelay(pdMS_TO_TICKS(100));
         }
 
-        conn.Close(0, "done");
-        close(sock);
+        ESP_ERROR_CHECK(esp_mqtt_client_stop(mqtt_client));
+        ESP_ERROR_CHECK(esp_mqtt_client_destroy(mqtt_client));
 
 }

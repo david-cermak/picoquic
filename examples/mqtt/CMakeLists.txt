@@ -2,8 +2,12 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
-set(EXTRA_COMPONENT_DIRS "../../impl/esp-http3" "/home/david/repos/esp-protocols/common_components/linux_compat/esp_timer")
+set(EXTRA_COMPONENT_DIRS "../../impl/esp-http3")
+
+if("${IDF_TARGET}" STREQUAL "linux")
+    list(APPEND EXTRA_COMPONENT_DIRS "/home/david/repos/esp-protocols/common_components/linux_compat/esp_timer")
+endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 idf_build_set_property(MINIMAL_BUILD ON)
-project(simple)
+project(mqtt)
