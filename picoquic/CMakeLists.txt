@@ -1,5 +1,5 @@
-set(PQDIR "../impl/picoquic/")
-set(PTLSDIR "../impl/picotls/")
+set(PQDIR "../deps/picoquic/")
+set(PTLSDIR "../deps/picotls/")
 SET(PTLS_FILES
         lib/hpke.c
         lib/picotls.c
@@ -64,9 +64,12 @@ list(TRANSFORM PTLS_FILES PREPEND "${PTLSDIR}")
 
 idf_component_register(SRCS "port/picosocks_esp32.c"
                             "port/picoquic_esp_log.c"
+                            "port/picoquic_ptls_minicrypto_stub.c"
+                            "port/prctl_stub.c"
+                            "port/picoquic_mbedtls_get_cert.c"
                             ${PICOQUIC_LIBRARY_FILES}
                             ${PTLS_FILES}
-                    INCLUDE_DIRS "${PTLSDIR}/include" "${PQDIR}/picoquic_mbedtls" "${PQDIR}/picoquic"
+                    INCLUDE_DIRS "${PTLSDIR}/include" "${PQDIR}/picoquic_mbedtls" "${PQDIR}/picoquic" "port/include"
                     REQUIRES mbedtls)
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE PTLS_WITHOUT_OPENSSL)
@@ -74,3 +77,5 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE PICOQUIC_WITH_MBEDTLS)
 target_compile_definitions(${COMPONENT_LIB} PRIVATE PTLS_WITHOUT_FUSION)
 target_compile_definitions(${COMPONENT_LIB} PRIVATE PTLS_HAVE_MBEDTLS=1)
 target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")
+
+target_link_options(${COMPONENT_LIB} INTERFACE "-Wl,--wrap=ptls_mbedtls_get_certificate_verifier")

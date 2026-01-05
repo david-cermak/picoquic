@@ -2,10 +2,10 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
-set(EXTRA_COMPONENT_DIRS "../../impl/esp-http3")
+set(EXTRA_COMPONENT_DIRS "../../deps/esp-http3")
 
 if("${IDF_TARGET}" STREQUAL "linux")
-    list(APPEND EXTRA_COMPONENT_DIRS "/home/david/repos/esp-protocols/common_components/linux_compat/esp_timer")
+    list(APPEND EXTRA_COMPONENT_DIRS "../../deps/esp-protocols/common_components/linux_compat/esp_timer")
 endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)

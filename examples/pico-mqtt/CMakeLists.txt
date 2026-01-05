@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS "../../picoquic")
 if("${IDF_TARGET}" STREQUAL "linux")
-    list(APPEND EXTRA_COMPONENT_DIRS "/home/david/repos/esp-protocols/common_components/linux_compat")
+    list(APPEND EXTRA_COMPONENT_DIRS "../../deps/esp-protocols/common_components/linux_compat")
 endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
