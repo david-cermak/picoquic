@@ -25,3 +25,13 @@ jobs:
           ./scripts/get_deps.sh
           cd examples/pico-mqtt
           idf.py build
+          rm -rf build sdkconfig
+          idf.py --preview set-target linux
+          idf.py build
+          ./build/pico-mqtt.elf
+          cd ../mqtt
+          idf.py build
+          rm -rf build sdkconfig
+          idf.py --preview set-target linux
+          idf.py build
+          ./build/mqtt.elf
