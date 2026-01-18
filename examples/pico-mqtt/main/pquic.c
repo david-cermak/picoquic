@@ -82,6 +82,14 @@ static void mqtt_event_handler(void* handler_args, esp_event_base_t base, int32_
     }
 }
 
+static void wait_for_connected(uint32_t timeout_ms)
+{
+    const uint64_t start_ms = esp_timer_get_time() / 1000;
+    while (!s_connected && (esp_timer_get_time() / 1000) - start_ms < timeout_ms) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
 void app_main(void)
 {
 
@@ -118,15 +126,26 @@ void app_main(void)
     }
 
     ESP_ERROR_CHECK(esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL));
+
+    ESP_LOGI(TAG, "Connecting (1/2)...");
     ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+    wait_for_connected(8000);
 
-    uint64_t start_ms = esp_timer_get_time() / 1000;
-    while (!s_connected && (esp_timer_get_time() / 1000) - start_ms < 8000) {
-        vTaskDelay(pdMS_TO_TICKS(50));
-    }
+    ESP_LOGI(TAG, "Holding connection open for 5 seconds...");
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
-    ESP_LOGI(TAG, "Holding connection open for 15 seconds...");
-    vTaskDelay(pdMS_TO_TICKS(15000));
+    ESP_LOGI(TAG, "Disconnecting...");
+    ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
+
+    ESP_LOGI(TAG, "Waiting 2 seconds before reconnect...");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    ESP_LOGI(TAG, "Reconnecting (2/2) - should attempt session resumption/0-RTT if broker provided a ticket...");
+    ESP_ERROR_CHECK(esp_mqtt_client_start(client));
+    wait_for_connected(8000);
+
+    ESP_LOGI(TAG, "Holding connection open for 5 seconds...");
+    vTaskDelay(pdMS_TO_TICKS(5000));
 
     ESP_ERROR_CHECK(esp_mqtt_client_stop(client));
     ESP_ERROR_CHECK(esp_mqtt_client_destroy(client));

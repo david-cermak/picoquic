@@ -200,8 +200,13 @@ static int tp_connect(esp_transport_handle_t t, const char *host, int port, int 
         return -1;
     }
 
+    // Enable session resumption / 0-RTT by persisting tickets across connections.
+    // picoquic loads tickets when a non-null ticket store filename is provided.
+    static constexpr const char *kTicketStore = "pico_mqtt_ticket_store.bin";
+
     uint64_t now = picoquic_current_time();
-    ctx->quic = picoquic_create(1, NULL, NULL, NULL, kAlpn, NULL, NULL, NULL, NULL, NULL, now, NULL, NULL, NULL, 0);
+    ctx->quic = picoquic_create(1, NULL, NULL, NULL, kAlpn, NULL, NULL, NULL, NULL, nullptr, now,
+                               nullptr, kTicketStore, nullptr, 0);
     if (ctx->quic == nullptr) {
         errno = ENOMEM;
         return -1;
@@ -274,6 +279,12 @@ static int tp_connect(esp_transport_handle_t t, const char *host, int port, int 
         errno = ECONNRESET;
         return -1;
     }
+
+    // At this point picoquic reported the connection as ready.
+    // If we have a cached session ticket, picoquic may send 0-RTT packets.
+    // We don't have a public picoquic API to query 0-RTT acceptance here,
+    // so the easiest demo signal is the handshake completion latency.
+    ESP_LOGI(TAG, "tp_connect completed in %" PRIu64 " ms", (esp_timer_get_time() / 1000) - start_ms);
 
     return 0;
 }
@@ -423,6 +434,16 @@ static int tp_close(esp_transport_handle_t t)
     if (cnx) {
         (void)picoquic_close(cnx, 0);
     }
+
+    // Best-effort: persist tickets so the next connection can attempt resumption/0-RTT.
+    if (quic) {
+        static constexpr const char *kTicketStore = "pico_mqtt_ticket_store.bin";
+        int ticket_ret = picoquic_save_session_tickets(quic, kTicketStore);
+        if (ticket_ret != 0) {
+            ESP_LOGW(TAG, "picoquic_save_session_tickets failed: %d", ticket_ret);
+        }
+    }
+
     if (net) {
         (void)picoquic_wake_up_network_thread(net);
         picoquic_delete_network_thread(net);
