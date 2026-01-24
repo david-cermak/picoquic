@@ -45,7 +45,9 @@
 #include <string.h>
 #include <inttypes.h>
 #include <picoquic.h>
+#include <picoquic_internal.h>
 #include <picoquic_utils.h>
+#include <tls_api.h>
 #include <picosocks.h>
 #include "nvs_flash.h"
 #include "esp_event.h"
@@ -70,6 +72,130 @@
 static const char* TAG = "pquic";
 /* Hard cap to avoid unbounded buffering. */
 #define SAMPLE_CLIENT_MAX_DOWNLOAD_BYTES (64 * 1024)
+
+int picoquic_serialize_ticket(const picoquic_stored_ticket_t* ticket, uint8_t* bytes, size_t bytes_max, size_t* consumed);
+int picoquic_deserialize_ticket(picoquic_stored_ticket_t** ticket, uint8_t* bytes, size_t bytes_max, size_t* consumed);
+
+static uint8_t* g_ticket_blob = NULL;
+static size_t g_ticket_blob_len = 0;
+
+static int append_bytes(uint8_t** buf, size_t* len, size_t* cap, const uint8_t* src, size_t src_len)
+{
+    if (src_len == 0) {
+        return 0;
+    }
+    size_t needed = *len + src_len;
+    if (needed > *cap) {
+        size_t new_cap = (*cap == 0) ? 256 : *cap;
+        while (new_cap < needed) {
+            new_cap *= 2;
+        }
+        uint8_t* grown = (uint8_t*)realloc(*buf, new_cap);
+        if (grown == NULL) {
+            return -1;
+        }
+        *buf = grown;
+        *cap = new_cap;
+    }
+    memcpy(*buf + *len, src, src_len);
+    *len += src_len;
+    return 0;
+}
+
+static void persist_tickets_to_heap(picoquic_quic_t* quic)
+{
+    if (quic == NULL) {
+        return;
+    }
+    uint8_t* blob = NULL;
+    size_t blob_len = 0;
+    size_t blob_cap = 0;
+    size_t stored = 0;
+    const uint64_t current_time = picoquic_get_tls_time(quic);
+    const picoquic_stored_ticket_t* next = quic->p_first_ticket;
+
+    while (next != NULL) {
+        if (next->time_valid_until > current_time && next->was_used == 0) {
+            uint8_t buffer[2048];
+            size_t record_size = 0;
+            int ret = picoquic_serialize_ticket(next, buffer, sizeof(buffer), &record_size);
+            if (ret == 0 && record_size <= UINT32_MAX) {
+                uint32_t size32 = (uint32_t)record_size;
+                if (append_bytes(&blob, &blob_len, &blob_cap, (uint8_t*)&size32, sizeof(size32)) != 0 ||
+                    append_bytes(&blob, &blob_len, &blob_cap, buffer, record_size) != 0) {
+                    free(blob);
+                    ESP_LOGW(TAG, "Out of memory while caching tickets");
+                    return;
+                }
+                stored++;
+            }
+        }
+        next = next->next_ticket;
+    }
+
+    free(g_ticket_blob);
+    g_ticket_blob = blob;
+    g_ticket_blob_len = blob_len;
+    ESP_LOGD(TAG, "stored %u ticket(s) in heap (%u bytes)",
+        (unsigned)stored, (unsigned)g_ticket_blob_len);
+}
+
+static void restore_tickets_from_heap(picoquic_quic_t* quic)
+{
+    if (quic == NULL) {
+        return;
+    }
+    if (g_ticket_blob == NULL || g_ticket_blob_len == 0) {
+        ESP_LOGD(TAG, "no cached tickets in heap");
+        return;
+    }
+
+    picoquic_free_tickets(&quic->p_first_ticket);
+    picoquic_stored_ticket_t* previous = NULL;
+    const uint64_t current_time = picoquic_get_tls_time(quic);
+    size_t restored = 0;
+
+    size_t offset = 0;
+    while (offset + sizeof(uint32_t) <= g_ticket_blob_len) {
+        uint32_t storage_size = 0;
+        memcpy(&storage_size, g_ticket_blob + offset, sizeof(storage_size));
+        offset += sizeof(storage_size);
+        if (storage_size > 2048 || offset + storage_size > g_ticket_blob_len) {
+            ESP_LOGW(TAG, "ticket blob corrupted or truncated");
+            break;
+        }
+
+        picoquic_stored_ticket_t* ticket = NULL;
+        size_t consumed = 0;
+        int ret = picoquic_deserialize_ticket(&ticket, g_ticket_blob + offset, storage_size, &consumed);
+        offset += storage_size;
+
+        if (ret != 0 || consumed != storage_size || ticket == NULL) {
+            if (ticket != NULL) {
+                free(ticket);
+            }
+            ESP_LOGW(TAG, "ticket deserialize failed: %d", ret);
+            continue;
+        }
+
+        if (ticket->time_valid_until < current_time) {
+            free(ticket);
+            continue;
+        }
+
+        ticket->next_ticket = NULL;
+        if (previous == NULL) {
+            quic->p_first_ticket = ticket;
+        } else {
+            previous->next_ticket = ticket;
+        }
+        previous = ticket;
+        restored++;
+    }
+
+    ESP_LOGD(TAG, "restored %u ticket(s) from heap (%u bytes)",
+        (unsigned)restored, (unsigned)g_ticket_blob_len);
+}
 
  /* Client context and callback management:
   *
@@ -511,9 +637,10 @@ static int sample_client_init(char const* server_name, int server_port, char con
      * - instantiate a binary log option, and log all packets.
      */
     if (ret == 0) {
+        static const char* kTicketStore = "picoquic_sample_ticket_store.bin";
         *quic = picoquic_create(1, NULL, NULL, NULL, PICOQUIC_SAMPLE_ALPN, NULL, NULL,
             NULL, NULL, NULL, current_time, NULL,
-            NULL, NULL, 0);
+            kTicketStore, NULL, 0);
 
         if (*quic == NULL) {
             ESP_LOGE(TAG, "Could not create quic context");
@@ -522,9 +649,11 @@ static int sample_client_init(char const* server_name, int server_port, char con
         else {
             picoquic_set_default_congestion_algorithm(*quic, picoquic_bbr_algorithm);
             /* Intentionally not enabling keylog/qlog here (they typically write to files). */
-            picoquic_set_log_level(*quic, 1);
+            picoquic_set_log_level(*quic, 10);
             /* Enable picoquic internal logs and route them to ESP_LOGx() */
             (void)picoquic_set_esp_log(*quic, TAG, 1 /* log_packets */);
+            /* Restore any cached session tickets from heap */
+            restore_tickets_from_heap(*quic);
         }
     }
     /* Initialize the callback context and create the connection context.
@@ -622,6 +751,11 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
     /* Done. At this stage, we could print out statistics, etc. */
     sample_client_report(&client_ctx);
 
+    /* Persist session tickets in RAM for the next connection */
+    if (quic != NULL) {
+        persist_tickets_to_heap(quic);
+    }
+
     /* Free the QUIC context */
     if (quic != NULL) {
         picoquic_free(quic);
@@ -640,13 +774,33 @@ void app_main(void)
     printf("app_main\n");
         // Initialize ESP-IDF components
         ESP_ERROR_CHECK(nvs_flash_init());
-        ESP_ERROR_CHECK(esp_netif_init());
         ESP_ERROR_CHECK(esp_event_loop_create_default());
+    #if !defined(CONFIG_IDF_TARGET_LINUX)
+        ESP_ERROR_CHECK(esp_netif_init());
         ESP_ERROR_CHECK(example_connect());
+    #endif
+
 #define NAME "192.168.0.37"
 #define PORT 1234
 // #define NAME "127.0.0.1"
 // #define PORT 4433
     static const char* file_names[] = { "index.htm" };
+    ESP_LOGI(TAG, "Connecting (1/2)...");
     (void)picoquic_sample_client(NAME, PORT, ".", 1, file_names);
+
+    ESP_LOGD(TAG, "ticket cache after first run: %u bytes", (unsigned)g_ticket_blob_len);
+    ESP_LOGI(TAG, "Waiting 2 seconds before reconnect...");
+    vTaskDelay(pdMS_TO_TICKS(2000));
+
+    ESP_LOGI(TAG, "Reconnecting (2/2)...");
+    (void)picoquic_sample_client(NAME, PORT, ".", 1, file_names);
+    ESP_LOGD(TAG, "ticket cache after second run: %u bytes", (unsigned)g_ticket_blob_len);
 }
+
+#ifdef CONFIG_IDF_TARGET_LINUX
+int main(void)
+{
+    app_main();
+    return 0;
+}
+#endif
