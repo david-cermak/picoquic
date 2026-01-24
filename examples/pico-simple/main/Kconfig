@@ -1,0 +1,15 @@
+menu "PQUIC Client"
+
+config PQUIC_SERVER_NAME
+    string "Server name or IP"
+    default "192.168.0.37"
+    help
+        Hostname or IP address for the picoquic server.
+
+config PQUIC_SERVER_PORT
+    int "Server port"
+    default 1234
+    help
+        UDP port to connect to.
+
+endmenu

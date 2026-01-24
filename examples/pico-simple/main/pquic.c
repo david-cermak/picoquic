@@ -19,26 +19,6 @@
 * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-/* The "sample" project builds a simple file transfer program that can be
- * instantiated in client or server mode. The "sample_client" implements
- * the client components of the sample application.
- *
- * Developing the client requires two main components:
- *  - the client "callback" that implements the client side of the
- *    application protocol, managing the client side application context
- *    for the connection.
- *  - the client loop, that reads messages on the socket, submits them
- *    to the Quic context, let the client prepare messages, and send
- *    them on the appropriate socket.
- *
- * The Sample Client uses the "qlog" option to produce Quic Logs as defined
- * in https://datatracker.ietf.org/doc/draft-marx-qlog-event-definitions-quic-h3/.
- * This is an optional feature, which requires linking with the "loglib" library,
- * and using the picoquic_set_qlog() API defined in "autoqlog.h". When a connection
- * completes, the code saves the log as a file named after the Initial Connection
- * ID (in hexa), with the suffix ".client.qlog".
- */
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,9 +32,7 @@
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "protocol_examples_common.h"
-// #include <autoqlog.h>
 #include <picoquic_packet_loop.h>
-// #include "picoquic_sample.h"
 #include "picoquic_bbr.h"
 #include "picoquic_esp_log.h"
 #include "esp_log.h"
@@ -63,14 +41,8 @@
 #define PICOQUIC_SAMPLE_SNI "test.example.com"
 
 #define PICOQUIC_SAMPLE_NO_ERROR 0
-#define PICOQUIC_SAMPLE_INTERNAL_ERROR 0x101
-#define PICOQUIC_SAMPLE_NAME_TOO_LONG_ERROR 0x102
-#define PICOQUIC_SAMPLE_NO_SUCH_FILE_ERROR 0x103
-#define PICOQUIC_SAMPLE_FILE_READ_ERROR 0x104
-#define PICOQUIC_SAMPLE_FILE_CANCEL_ERROR 0x105
 
 static const char* TAG = "pquic";
-/* Hard cap to avoid unbounded buffering. */
 #define SAMPLE_CLIENT_MAX_DOWNLOAD_BYTES (64 * 1024)
 
 int picoquic_serialize_ticket(const picoquic_stored_ticket_t* ticket, uint8_t* bytes, size_t bytes_max, size_t* consumed);
@@ -197,30 +169,6 @@ static void restore_tickets_from_heap(picoquic_quic_t* quic)
         (unsigned)restored, (unsigned)g_ticket_blob_len);
 }
 
- /* Client context and callback management:
-  *
-  * The client application context is created before the connection
-  * is created. It contains the list of files that will be required
-  * from the server.
-  * On initial start, the client creates all the stream contexts
-  * that will be needed for the requested files, and marks all
-  * these contexts as active.
-  * Each stream context includes:
-  *  - description of the stream state:
-  *      name sent or not, FILE open or not, stream reset or not,
-  *      stream finished or not.
-  *  - index of the file in the list.
-  *  - number of file name bytes sent.
-  *  - stream ID.
-  *  - the FILE pointer for reading the data.
-  * Server side stream context is created when the client starts the
-  * stream. It is closed when the file transmission
-  * is finished, or when the stream is abandoned.
-  *
-  * The server side callback is a large switch statement, with one entry
-  * for each of the call back events.
-  */
-
 typedef struct st_sample_client_stream_ctx_t {
     struct st_sample_client_stream_ctx_t* next_stream;
     size_t file_rank;
@@ -307,8 +255,6 @@ static int sample_client_create_stream(picoquic_cnx_t* cnx,
         stream_ctx->stream_id = picoquic_get_next_local_stream_id(client_ctx->cnx, 0);
         stream_ctx->name_length = strlen(client_ctx->file_names[file_rank]);
 
-        /* Mark the stream as active. The callback will be asked to provide data when
-         * the connection is ready. */
         ret = picoquic_mark_active_stream(cnx, stream_ctx->stream_id, 1, stream_ctx);
         if (ret != 0) {
             ESP_LOGE(TAG, "Error %d, cannot initialize stream for file number %d", ret, (int)file_rank);
@@ -375,24 +321,18 @@ int sample_client_callback(picoquic_cnx_t* cnx,
         switch (fin_or_event) {
         case picoquic_callback_stream_data:
         case picoquic_callback_stream_fin:
-            /* Data arrival on stream #x, maybe with fin mark */
             if (stream_ctx == NULL) {
-                /* This is unexpected, as all contexts were declared when initializing the
-                 * connection. */
                 return -1;
             }
             else if (!stream_ctx->is_name_sent) {
-                /* Unexpected: should not receive data before sending the file name to the server */
                 return -1;
             }
             else if (stream_ctx->is_stream_reset || stream_ctx->is_stream_finished) {
-                /* Unexpected: receive after fin */
                 return -1;
             }
             else
             {
                 if (ret == 0 && length > 0) {
-                    /* No filesystem: buffer in memory. */
                     ret = sample_client_append_bytes(stream_ctx, bytes, length);
                 }
 
@@ -400,11 +340,9 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                     stream_ctx->is_stream_finished = 1;
                     client_ctx->nb_files_received++;
 
-                    /* Print the downloaded content. */
                     {
                         const char* fname = client_ctx->file_names[stream_ctx->file_rank];
                         size_t n = stream_ctx->bytes_received;
-                        /* Ensure NUL termination for logging as a string. */
                         if (stream_ctx->recv_cap < n + 1) {
                             uint8_t* grown = (uint8_t*)realloc(stream_ctx->recv_buf, n + 1);
                             if (grown != NULL) {
@@ -421,24 +359,19 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                     }
 
                     if ((client_ctx->nb_files_received + client_ctx->nb_files_failed) >= client_ctx->nb_files) {
-                        /* everything is done, close the connection */
                         ret = picoquic_close(cnx, 0);
                     }
                 }
             }
             break;
-        case picoquic_callback_stop_sending: /* Should not happen, treated as reset */
-            /* Mark stream as abandoned, close the file, etc. */
+        case picoquic_callback_stop_sending:
             picoquic_reset_stream(cnx, stream_id, 0);
             /* Fall through */
-        case picoquic_callback_stream_reset: /* Server reset stream #x */
+        case picoquic_callback_stream_reset:
             if (stream_ctx == NULL) {
-                /* This is unexpected, as all contexts were declared when initializing the
-                 * connection. */
                 return -1;
             }
             else if (stream_ctx->is_stream_reset || stream_ctx->is_stream_finished) {
-                /* Unexpected: receive after fin */
                 return -1;
             }
             else {
@@ -447,15 +380,14 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 client_ctx->nb_files_failed++;
 
                 if ((client_ctx->nb_files_received + client_ctx->nb_files_failed) >= client_ctx->nb_files) {
-                    /* everything is done, close the connection */
                     ESP_LOGI(TAG, "All done, closing the connection.");
                     ret = picoquic_close(cnx, 0);
                 }
             }
             break;
         case picoquic_callback_stateless_reset:
-        case picoquic_callback_close: /* Received connection close */
-        case picoquic_callback_application_close: /* Received application close */
+        case picoquic_callback_close:
+        case picoquic_callback_application_close:
         {
             uint64_t local_reason = 0, remote_reason = 0;
             uint64_t local_app_reason = 0, remote_app_reason = 0;
@@ -471,12 +403,10 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 local_error, picoquic_error_name(local_error),
                 remote_error, picoquic_error_name(remote_error));
 
-            /* If the connection closes before streams finish/reset, mark them as failed so the report is meaningful. */
             for (sample_client_stream_ctx_t* s = client_ctx->first_stream; s != NULL; s = s->next_stream) {
                 if (!s->is_stream_finished && !s->is_stream_reset) {
                     s->remote_error = picoquic_get_remote_stream_error(cnx, s->stream_id);
                     if (s->remote_error == 0) {
-                        /* Fall back to connection close reasons if stream-specific error is not available. */
                         s->remote_error = (remote_app_reason != 0) ? remote_app_reason : remote_reason;
                     }
                     s->is_stream_reset = 1;
@@ -484,16 +414,11 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 }
             }
 
-            /* Mark the connection as completed */
             client_ctx->is_disconnected = 1;
-            /* Remove the application callback */
             picoquic_set_callback(cnx, NULL, NULL);
         }
             break;
         case picoquic_callback_version_negotiation:
-            /* The client did not get the right version.
-             * TODO: some form of negotiation?
-             */
             ESP_LOGI(TAG, "Received a version negotiation request:");
             for (size_t byte_index = 0; byte_index + 4 <= length; byte_index += 4) {
                 uint32_t vn = 0;
@@ -505,26 +430,19 @@ int sample_client_callback(picoquic_cnx_t* cnx,
             }
             break;
         case picoquic_callback_stream_gap:
-            /* This callback is never used. */
             break;
         case picoquic_callback_prepare_to_send:
-            /* Active sending API */
             if (stream_ctx == NULL) {
-                /* Decidedly unexpected */
                 return -1;
             } else if (stream_ctx->name_sent_length < stream_ctx->name_length){
                 uint8_t* buffer;
                 size_t available = stream_ctx->name_length - stream_ctx->name_sent_length;
                 int is_fin = 1;
 
-                /* The length parameter marks the space available in the packet */
                 if (available > length) {
                     available = length;
                     is_fin = 0;
                 }
-                /* Needs to retrieve a pointer to the actual buffer
-                 * the "bytes" parameter points to the sending context
-                 */
                 buffer = picoquic_provide_stream_data_buffer(bytes, available, is_fin, !is_fin);
                 if (buffer != NULL) {
                     char const* filename = client_ctx->file_names[stream_ctx->file_rank];
@@ -538,31 +456,21 @@ int sample_client_callback(picoquic_cnx_t* cnx,
                 }
             }
             else {
-                /* Nothing to send, just return */
             }
             break;
         case picoquic_callback_almost_ready:
             ESP_LOGI(TAG, "Connection to the server completed, almost ready.");
             break;
         case picoquic_callback_ready:
-            /* TODO: Check that the transport parameters are what the sample expects */
             ESP_LOGI(TAG, "Connection to the server confirmed.");
             break;
         default:
-            /* unexpected -- just ignore. */
             break;
         }
     }
 
     return ret;
 }
-
-/* Sample client,  loop call back management.
- * The function "picoquic_packet_loop" will call back the application when it is ready to
- * receive or send packets, after receiving a packet, and after sending a packet.
- * We implement here a minimal callback that instruct  "picoquic_packet_loop" to exit
- * when the connection is complete.
- */
 
 static int sample_client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_enum cb_mode,
     void* callback_ctx, void * callback_arg)
@@ -595,14 +503,7 @@ static int sample_client_loop_cb(picoquic_quic_t* quic, picoquic_packet_loop_cb_
     return ret;
 }
 
-/* Prepare the context used by the simple client:
- * - Create the QUIC context.
- * - Open the sockets
- * - Find the server's address
- * - Initialize the client context and create a client connection.
- */
-static int sample_client_init(char const* server_name, int server_port, char const* default_dir,
-    char const* ticket_store_filename, char const* token_store_filename,
+static int sample_client_init(char const* server_name, int server_port,
     struct sockaddr_storage * server_address, picoquic_quic_t** quic, picoquic_cnx_t** cnx, sample_client_ctx_t *client_ctx)
 {
     int ret = 0;
@@ -611,11 +512,7 @@ static int sample_client_init(char const* server_name, int server_port, char con
 
     *quic = NULL;
     *cnx = NULL;
-    (void)default_dir;
-    (void)ticket_store_filename;
-    (void)token_store_filename;
 
-    /* Get the server's address */
     if (ret == 0) {
         int is_name = 0;
 
@@ -628,14 +525,6 @@ static int sample_client_init(char const* server_name, int server_port, char con
         }
     }
 
-    /* Create a QUIC context. It could be used for many connections, but in this sample we
-     * will use it for just one connection.
-     * The sample code exercises just a small subset of the QUIC context configuration options:
-     * - use files to store tickets and tokens in order to manage retry and 0-RTT
-     * - set the congestion control algorithm to BBR
-     * - enable logging of encryption keys for wireshark debugging.
-     * - instantiate a binary log option, and log all packets.
-     */
     if (ret == 0) {
         static const char* kTicketStore = "picoquic_sample_ticket_store.bin";
         *quic = picoquic_create(1, NULL, NULL, NULL, PICOQUIC_SAMPLE_ALPN, NULL, NULL,
@@ -648,23 +537,15 @@ static int sample_client_init(char const* server_name, int server_port, char con
         }
         else {
             picoquic_set_default_congestion_algorithm(*quic, picoquic_bbr_algorithm);
-            /* Intentionally not enabling keylog/qlog here (they typically write to files). */
             picoquic_set_log_level(*quic, 10);
-            /* Enable picoquic internal logs and route them to ESP_LOGx() */
             (void)picoquic_set_esp_log(*quic, TAG, 1 /* log_packets */);
-            /* Restore any cached session tickets from heap */
             restore_tickets_from_heap(*quic);
         }
     }
-    /* Initialize the callback context and create the connection context.
-     * We use minimal options on the client side, keeping the transport
-     * parameter values set by default for picoquic. This could be fixed later.
-     */
 
     if (ret == 0) {
         ESP_LOGI(TAG, "Starting connection to %s, port %d", server_name, server_port);
 
-        /* Create a client connection */
         *cnx = picoquic_create_cnx(*quic, picoquic_null_connection_id, picoquic_null_connection_id,
             (struct sockaddr*)server_address, current_time, 0, sni, PICOQUIC_SAMPLE_ALPN, 1);
 
@@ -673,17 +554,13 @@ static int sample_client_init(char const* server_name, int server_port, char con
             ret = -1;
         }
         else {
-            /* Document connection in client's context */
             client_ctx->cnx = *cnx;
-            /* Set the client callback context */
             picoquic_set_callback(*cnx, sample_client_callback, client_ctx);
-            /* Client connection parameters could be set here, before starting the connection. */
             ret = picoquic_start_client_cnx(*cnx);
             if (ret < 0) {
                 ESP_LOGE(TAG, "Could not activate connection");
             }
             else {
-                /* Printing out the initial CID, which is used to identify log files */
                 picoquic_connection_id_t icid = picoquic_get_initial_cnxid(*cnx);
                 char icid_hex[2 * PICOQUIC_CONNECTION_ID_MAX_SIZE + 1];
                 size_t pos = 0;
@@ -699,23 +576,7 @@ static int sample_client_init(char const* server_name, int server_port, char con
     return ret;
 }
 
-/* Client:
- * - Call the init function to:
- *    - Create the QUIC context.
- *    - Open the sockets
- *    - Find the server's address
- *    - Create a client context and a client connection.
- * - Initialize the list of required files based on the CLI parameters.
- * - On a forever loop:
- *     - get the next wakeup time
- *     - wait for arrival of message on sockets until that time
- *     - if a message arrives, process it.
- *     - else, check whether there is something to send.
- *       if there is, send it.
- * - The loop breaks if the client connection is finished.
- */
-
-int picoquic_sample_client(char const * server_name, int server_port, char const * default_dir,
+int picoquic_sample_client(char const * server_name, int server_port,
     int nb_files, char const ** file_names)
 {
     int ret = 0;
@@ -724,16 +585,12 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
     picoquic_cnx_t* cnx = NULL;
     sample_client_ctx_t client_ctx = { 0 };
 
-    ret = sample_client_init(server_name, server_port, default_dir,
-        NULL, NULL,
-        &server_address, &quic, &cnx, &client_ctx);
+    ret = sample_client_init(server_name, server_port, &server_address, &quic, &cnx, &client_ctx);
 
     if (ret == 0) {
-        /* Initialize all the streams contexts from the list of streams passed on the API. */
         client_ctx.file_names = file_names;
         client_ctx.nb_files = nb_files;
 
-        /* Create a stream context for all the files that should be downloaded */
         for (int i = 0; ret == 0 && i < client_ctx.nb_files; i++) {
             ret = sample_client_create_stream(cnx, &client_ctx, i);
             if (ret < 0) {
@@ -742,26 +599,21 @@ int picoquic_sample_client(char const * server_name, int server_port, char const
         }
     }
 
-    /* Wait for packets */
     ret = picoquic_packet_loop(quic, 0, server_address.ss_family, 0, 0, 0, sample_client_loop_cb, &client_ctx);
     if (ret != 0) {
         ESP_LOGW(TAG, "picoquic_packet_loop returned %d (%s)", ret, picoquic_error_name((uint64_t)ret));
     }
 
-    /* Done. At this stage, we could print out statistics, etc. */
     sample_client_report(&client_ctx);
 
-    /* Persist session tickets in RAM for the next connection */
     if (quic != NULL) {
         persist_tickets_to_heap(quic);
     }
 
-    /* Free the QUIC context */
     if (quic != NULL) {
         picoquic_free(quic);
     }
 
-    /* Free the Client context */
     sample_client_free_context(&client_ctx);
 
     return ret;
@@ -772,7 +624,6 @@ void app_main(void)
 {
 
     printf("app_main\n");
-        // Initialize ESP-IDF components
         ESP_ERROR_CHECK(nvs_flash_init());
         ESP_ERROR_CHECK(esp_event_loop_create_default());
     #if !defined(CONFIG_IDF_TARGET_LINUX)
@@ -780,20 +631,18 @@ void app_main(void)
         ESP_ERROR_CHECK(example_connect());
     #endif
 
-#define NAME "192.168.0.37"
-#define PORT 1234
-// #define NAME "127.0.0.1"
-// #define PORT 4433
+    const char* server_name = CONFIG_PQUIC_SERVER_NAME;
+    int server_port = CONFIG_PQUIC_SERVER_PORT;
     static const char* file_names[] = { "index.htm" };
     ESP_LOGI(TAG, "Connecting (1/2)...");
-    (void)picoquic_sample_client(NAME, PORT, ".", 1, file_names);
+    (void)picoquic_sample_client(server_name, server_port, 1, file_names);
 
     ESP_LOGD(TAG, "ticket cache after first run: %u bytes", (unsigned)g_ticket_blob_len);
     ESP_LOGI(TAG, "Waiting 2 seconds before reconnect...");
     vTaskDelay(pdMS_TO_TICKS(2000));
 
     ESP_LOGI(TAG, "Reconnecting (2/2)...");
-    (void)picoquic_sample_client(NAME, PORT, ".", 1, file_names);
+    (void)picoquic_sample_client(server_name, server_port, 1, file_names);
     ESP_LOGD(TAG, "ticket cache after second run: %u bytes", (unsigned)g_ticket_blob_len);
 }
 
