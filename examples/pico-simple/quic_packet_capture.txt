@@ -1,0 +1,637 @@
+No.     Time           Source                Destination           Protocol Length Info
+    338 33.281836688   127.0.0.1             127.0.0.1             QUIC     1294   Initial, DCID=bed50d8089618d29, SCID=2c57842d70987c26, PKN: 99775, PING, CRYPTO
+
+Frame 338: 1294 bytes on wire (10352 bits), 1294 bytes captured (10352 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 60957, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 338]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..00 .... = Packet Type: Initial (0)
+    [.... 00.. = Reserved: 0]
+    [.... ..11 = Packet Number Length: 4 bytes (3)]
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: bed50d8089618d29
+    Source Connection ID Length: 8
+    Source Connection ID: 2c57842d70987c26
+    Token Length: 0
+    Length: 312
+    [Packet Number: 99775]
+    Payload [truncated]: eeabe5a6c8f466b01ccb38bac6de06c6a8d21e804796cb62487d5014cdffff3ba506f730ef647d648182e96378d75cd81fa51108cc293cc947464fece4c4c1e7231077d803a4508fe292453d3d1ffca4dff27c104c65f03dd02f54a451a8dad065db0525fff6243bdf7769e530
+    PING
+        Frame Type: PING (0x0000000000000001)
+    CRYPTO
+        Frame Type: CRYPTO (0x0000000000000006)
+        Offset: 0
+        Length: 287
+        Crypto Data
+        TLSv1.3 Record Layer: Handshake Protocol: Client Hello
+            Handshake Protocol: Client Hello
+                Handshake Type: Client Hello (1)
+                Length: 283
+                Version: TLS 1.2 (0x0303)
+                Random: 65270fccbd0ddc3ce9d40ad014220c85d769c12340a3ceddd042934ebb71f200
+                Session ID Length: 0
+                Cipher Suites Length: 6
+                Cipher Suites (3 suites)
+                Compression Methods Length: 1
+                Compression Methods (1 method)
+                Extensions Length: 236
+                Extension: key_share (len=71) secp256r1
+                    Type: key_share (51)
+                    Length: 71
+                    Key Share extension
+                Extension: server_name (len=21) name=test.example.com
+                    Type: server_name (0)
+                    Length: 21
+                    Server Name Indication extension
+                        Server Name list length: 19
+                        Server Name Type: host_name (0)
+                        Server Name length: 16
+                        Server Name: test.example.com
+                Extension: application_layer_protocol_negotiation (len=18)
+                    Type: application_layer_protocol_negotiation (16)
+                    Length: 18
+                    ALPN Extension Length: 16
+                    ALPN Protocol
+                        ALPN string length: 15
+                        ALPN Next Protocol: picoquic_sample
+                Extension: supported_versions (len=3) TLS 1.3
+                    Type: supported_versions (43)
+                    Length: 3
+                    Supported Versions length: 2
+                    Supported Version: TLS 1.3 (0x0304)
+                Extension: signature_algorithms (len=10)
+                    Type: signature_algorithms (13)
+                    Length: 10
+                    Signature Hash Algorithms Length: 8
+                    Signature Hash Algorithms (4 algorithms)
+                Extension: supported_groups (len=6)
+                    Type: supported_groups (10)
+                    Length: 6
+                    Supported Groups List Length: 4
+                    Supported Groups (2 groups)
+                Extension: quic_transport_parameters (len=73)
+                    Type: quic_transport_parameters (57)
+                    Length: 73
+                    Parameter: initial_max_stream_data_bidi_local (len=4) 2097152
+                        Type: initial_max_stream_data_bidi_local (0x05)
+                        Length: 4
+                        Value: 80200000
+                        initial_max_stream_data_bidi_local: 2097152
+                    Parameter: initial_max_data (len=4) 1048576
+                        Type: initial_max_data (0x04)
+                        Length: 4
+                        Value: 80100000
+                        initial_max_data: 1048576
+                    Parameter: initial_max_streams_bidi (len=2) 512
+                        Type: initial_max_streams_bidi (0x08)
+                        Length: 2
+                        Value: 4200
+                        initial_max_streams_bidi: 512
+                    Parameter: max_idle_timeout (len=4) 30000 ms
+                        Type: max_idle_timeout (0x01)
+                        Length: 4
+                        Value: 80007530
+                        max_idle_timeout: 30000
+                    Parameter: max_udp_payload_size (len=2) 1440
+                        Type: max_udp_payload_size (0x03)
+                        Length: 2
+                        Value: 45a0
+                        max_udp_payload_size: 1440
+                    Parameter: initial_max_streams_uni (len=2) 512
+                        Type: initial_max_streams_uni (0x09)
+                        Length: 2
+                        Value: 4200
+                        initial_max_streams_uni: 512
+                    Parameter: initial_max_stream_data_bidi_remote (len=4) 65635
+                        Type: initial_max_stream_data_bidi_remote (0x06)
+                        Length: 4
+                        Value: 80010063
+                        initial_max_stream_data_bidi_remote: 65635
+                    Parameter: initial_max_stream_data_uni (len=4) 65535
+                        Type: initial_max_stream_data_uni (0x07)
+                        Length: 4
+                        Value: 8000ffff
+                        initial_max_stream_data_uni: 65535
+                    Parameter: active_connection_id_limit (len=1) 8
+                        Type: active_connection_id_limit (0x0e)
+                        Length: 1
+                        Value: 08
+                        Active Connection ID Limit: 8
+                    Parameter: max_ack_delay (len=1) 10
+                        Type: max_ack_delay (0x0b)
+                        Length: 1
+                        Value: 0a
+                        max_ack_delay: 10
+                    Parameter: initial_source_connection_id (len=8)
+                        Type: initial_source_connection_id (0x0f)
+                        Length: 8
+                        Value: 2c57842d70987c26
+                        Initial Source Connection ID: 2c57842d70987c26
+                    Parameter: loss_bits (len=1)
+                        Type: loss_bits (0x1057)
+                        Length: 1
+                        Value: 01
+                        loss_bits: 1
+                    Parameter: min_ack_delay (len=2) 1000
+                        Type: min_ack_delay (0xff04de1b)
+                        Length: 2
+                        Value: 43e8
+                        min_ack_delay: 1000
+                Extension: psk_key_exchange_modes (len=2)
+                    Type: psk_key_exchange_modes (45)
+                    Length: 2
+                    PSK Key Exchange Modes Length: 1
+                    PSK Key Exchange Mode: PSK with (EC)DHE key establishment (psk_dhe_ke) (1)
+                [JA4: u13d0308pe_55b375c5d22e_af0a630e9e67]
+                [JA4_r: u13d0308pe_1301,1302,1303_000a,000d,002b,002d,0033,0039_0804,0403,0401,0201]
+                [JA3 Fullstring: 771,4865-4866-4867,51-0-16-43-13-10-57-45,23-29,]
+                [JA3: 19408e45e4e226d0ded631f6497f9907]
+QUIC IETF
+    [Expert Info (Note/Protocol): (Random) padding data appended to the datagram]
+
+No.     Time           Source                Destination           Protocol Length Info
+    341 33.289858351   127.0.0.1             127.0.0.1             QUIC     2008   Handshake, DCID=2c57842d70987c26, SCID=9614bf922ac4c1d1
+
+Frame 341: 2008 bytes on wire (16064 bits), 2008 bytes captured (16064 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 60957
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 185]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..00 .... = Packet Type: Initial (0)
+    [.... 00.. = Reserved: 0]
+    [.... ..11 = Packet Number Length: 4 bytes (3)]
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 2c57842d70987c26
+    Source Connection ID Length: 8
+    Source Connection ID: 9614bf922ac4c1d1
+    Token Length: 0
+    Length: 159
+    [Packet Number: 89768]
+    Payload [truncated]: 94437f01ef457775372a2b78e9dbf5ba8b0bbf7480edc484109473dc7a3ccfabc19864baf6977d44c9833d63697e7391b2126ad34d6703be8d149ae098411db9f6ba99a61b16da90f6ef5534d2a8b61338bb72a8f8224ac4c7763ded2c3d3202392a4701692bb5801acc27af9f
+    ACK
+        Frame Type: ACK (0x0000000000000003)
+        Largest Acknowledged: 99775
+        ACK Delay: 969
+        ACK Range Count: 0
+        First ACK Range: 0
+        ECT(0) Count: 0
+        ECT(1) Count: 1
+        ECN-CE Count: 0
+    CRYPTO
+        Frame Type: CRYPTO (0x0000000000000006)
+        Offset: 0
+        Length: 123
+        Crypto Data
+        TLSv1.3 Record Layer: Handshake Protocol: Server Hello
+            Handshake Protocol: Server Hello
+                Handshake Type: Server Hello (2)
+                Length: 119
+                Version: TLS 1.2 (0x0303)
+                Random: 4fa7948a4c93d6680d38993fde895f92404e9b6d4d36018e6953d0dc988fb29c
+                Session ID Length: 0
+                Cipher Suite: TLS_AES_128_GCM_SHA256 (0x1301)
+                Compression Method: null (0)
+                Extensions Length: 79
+                Extension: supported_versions (len=2) TLS 1.3
+                    Type: supported_versions (43)
+                    Length: 2
+                    Supported Version: TLS 1.3 (0x0304)
+                Extension: key_share (len=69) secp256r1
+                    Type: key_share (51)
+                    Length: 69
+                    Key Share extension
+                [JA3S Fullstring: 771,4865,43-51]
+                [JA3S: f4febc55ea12b31ae17cfb7e614afda8]
+QUIC IETF
+    [Packet Length: 1067]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 2c57842d70987c26
+    Source Connection ID Length: 8
+    Source Connection ID: 9614bf922ac4c1d1
+    Length: 1042
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 2317138ab9fd6a187cd9b49a2eca927ad220b99056eb28bdb70f60be8114fbe812561359f762d527ce43aee6f22b03413d80212a2041f6f2bac7234aefc0b50596784547448cea77c6374cf442fb8091bfe78d6daa05aa0521b163ac416998ef5d08ceb3f6c5deac
+QUIC IETF
+    [Packet Length: 289]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 2c57842d70987c26
+    Source Connection ID Length: 8
+    Source Connection ID: 9614bf922ac4c1d1
+    Length: 264
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 60656458f03ec080f186a3bd2021626339a6b23e296df1a072e110a1d68ccf9605e8219d2a3fa7a1ee168c781e743c7ce686679bc72b3a449fe77f18389b574be7ca5aa82179065b7f52e36dcbec5057beeae0f6fef554945f8dee1b30b3b065d1b717eb0bc37759
+QUIC IETF
+    [Expert Info (Note/Protocol): (Random) padding data appended to the datagram]
+
+No.     Time           Source                Destination           Protocol Length Info
+    342 33.289905652   127.0.0.1             127.0.0.1             QUIC     1482   Protected Payload (KP0), DCID=2c57842d70987c26
+
+Frame 342: 1482 bytes on wire (11856 bits), 1482 bytes captured (11856 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 60957
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 1440]
+    QUIC Short Header DCID=2c57842d70987c26
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 65b540e19c9e3c295c93565908b67c43e951bf49248ca08f72419bdb3790fd697405c328137526701d5cf253b1a91ff2f975b66c27e7efab5497e2c0f5db14bcd1b248028ac5e04326755648e82496cc860e04ec3ab3b3e1af44f27d5b8b598144269ba059094669
+
+No.     Time           Source                Destination           Protocol Length Info
+    343 33.291212446   127.0.0.1             127.0.0.1             QUIC     369    Protected Payload (KP0), DCID=9614bf922ac4c1d1
+
+Frame 343: 369 bytes on wire (2952 bits), 369 bytes captured (2952 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 60957, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 93]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 9614bf922ac4c1d1
+    Source Connection ID Length: 8
+    Source Connection ID: 2c57842d70987c26
+    Length: 68
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload: 2bb69d3b2d79c276bddd744dc96dcc9ba00b5f33ee2f9701535bd42efddf0009dbda1031db2affc35c2dade786288c799975138cc3f75878cf27573d573c82e6b227c4a7
+QUIC IETF
+    [Packet Length: 234]
+    QUIC Short Header DCID=9614bf922ac4c1d1
+    Remaining Payload [truncated]: 7b3fe54d575fb63c0c223d4de329c1f740fa880fce58c042fb94988719a53372ba7940069a4ce2fed6e4a5e2a13db89db8e4816be1ed151683202a0a4539440162eeca48fc32e4e922f8f99a281fbce48c455b5d6adc477a37adb9cf11a0da2b02dcf1802baa88c9
+
+No.     Time           Source                Destination           Protocol Length Info
+    344 33.291244821   127.0.0.1             127.0.0.1             QUIC     1482   Protected Payload (KP0), DCID=9614bf922ac4c1d1
+
+Frame 344: 1482 bytes on wire (11856 bits), 1482 bytes captured (11856 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 60957, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 1440]
+    QUIC Short Header DCID=9614bf922ac4c1d1
+    Remaining Payload [truncated]: a015e89386510b6182965c2b2d6a7a215f661cfc8566fef909ed1245236463be5ef01d9250728ae5be5d68822c5d7562620472625e244dc5e996fc3aff2b9749d37da45e04f80b5105b72c91402eb73c339879252e090cd9330bcbf699fbd3b901c7f6c5cdccda8a
+
+No.     Time           Source                Destination           Protocol Length Info
+    345 33.291408210   127.0.0.1             127.0.0.1             QUIC     115    Protected Payload (KP0), DCID=2c57842d70987c26
+
+Frame 345: 115 bytes on wire (920 bits), 115 bytes captured (920 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 60957
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 73]
+    QUIC Short Header DCID=2c57842d70987c26
+    Remaining Payload: ecfd615f0efbbd7141c7b2df88d90bb04c1d91258d6fa0f0bf1f6c5a67bd98a89d362c044bbd4ccb53ed0d6b50899976341a5915c28ad0c30238ce6708a6d3f9
+
+No.     Time           Source                Destination           Protocol Length Info
+    346 33.291498151   127.0.0.1             127.0.0.1             QUIC     79     Protected Payload (KP0), DCID=9614bf922ac4c1d1
+
+Frame 346: 79 bytes on wire (632 bits), 79 bytes captured (632 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 60957, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 37]
+    QUIC Short Header DCID=9614bf922ac4c1d1
+    Remaining Payload: 02318649a58ee13b7a98c989b74848a1ed12e2e2c29aedeabe49c0e8
+
+No.     Time           Source                Destination           Protocol Length Info
+    347 33.291749896   127.0.0.1             127.0.0.1             QUIC     72     Protected Payload (KP0), DCID=2c57842d70987c26
+
+Frame 347: 72 bytes on wire (576 bits), 72 bytes captured (576 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 60957
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 30]
+    QUIC Short Header DCID=2c57842d70987c26
+    Remaining Payload: 1d3fa8eea0a42cdc6caceb6304085339dcde341840
+
+No.     Time           Source                Destination           Protocol Length Info
+    458 35.295328041   127.0.0.1             127.0.0.1             QUIC     1294   0-RTT, DCID=df421beac34d80af, SCID=442e87c96a168487
+
+Frame 458: 1294 bytes on wire (10352 bits), 1294 bytes captured (10352 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 44364, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 511]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..00 .... = Packet Type: Initial (0)
+    [.... 00.. = Reserved: 0]
+    [.... ..11 = Packet Number Length: 4 bytes (3)]
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: df421beac34d80af
+    Source Connection ID Length: 8
+    Source Connection ID: 442e87c96a168487
+    Token Length: 0
+    Length: 485
+    [Packet Number: 80108]
+    Payload [truncated]: 1fa8e98fb465fda394aca9bff612c25d79dcc67ff495cf83ba7d9f4998117277ed5946ffb7a0df5810f20dc0441f962883f08c97f30578e9ce1cb3fa8272fa79c968b5d8f6d06d90747d41902fe9d26391364f12af4f8835b5ae377ea095ae78b9be60b26a4b139e4152171ecc
+    PING
+        Frame Type: PING (0x0000000000000001)
+    CRYPTO
+        Frame Type: CRYPTO (0x0000000000000006)
+        Offset: 0
+        Length: 460
+        Crypto Data
+        TLSv1.3 Record Layer: Handshake Protocol: Client Hello
+            Handshake Protocol: Client Hello
+                Handshake Type: Client Hello (1)
+                Length: 456
+                Version: TLS 1.2 (0x0303)
+                Random: 641c18288a025084e654d14c77fa13672672f360ef0aa46643f0812c2aded4b4
+                Session ID Length: 0
+                Cipher Suites Length: 6
+                Cipher Suites (3 suites)
+                Compression Methods Length: 1
+                Compression Methods (1 method)
+                Extensions Length: 409
+                Extension: key_share (len=71) secp256r1
+                    Type: key_share (51)
+                    Length: 71
+                    Key Share extension
+                Extension: server_name (len=21) name=test.example.com
+                    Type: server_name (0)
+                    Length: 21
+                    Server Name Indication extension
+                        Server Name list length: 19
+                        Server Name Type: host_name (0)
+                        Server Name length: 16
+                        Server Name: test.example.com
+                Extension: application_layer_protocol_negotiation (len=18)
+                    Type: application_layer_protocol_negotiation (16)
+                    Length: 18
+                    ALPN Extension Length: 16
+                    ALPN Protocol
+                        ALPN string length: 15
+                        ALPN Next Protocol: picoquic_sample
+                Extension: supported_versions (len=3) TLS 1.3
+                    Type: supported_versions (43)
+                    Length: 3
+                    Supported Versions length: 2
+                    Supported Version: TLS 1.3 (0x0304)
+                Extension: signature_algorithms (len=10)
+                    Type: signature_algorithms (13)
+                    Length: 10
+                    Signature Hash Algorithms Length: 8
+                    Signature Hash Algorithms (4 algorithms)
+                Extension: supported_groups (len=6)
+                    Type: supported_groups (10)
+                    Length: 6
+                    Supported Groups List Length: 4
+                    Supported Groups (2 groups)
+                Extension: quic_transport_parameters (len=73)
+                    Type: quic_transport_parameters (57)
+                    Length: 73
+                    Parameter: initial_max_stream_data_bidi_local (len=4) 2097152
+                        Type: initial_max_stream_data_bidi_local (0x05)
+                        Length: 4
+                        Value: 80200000
+                        initial_max_stream_data_bidi_local: 2097152
+                    Parameter: initial_max_data (len=4) 1048576
+                        Type: initial_max_data (0x04)
+                        Length: 4
+                        Value: 80100000
+                        initial_max_data: 1048576
+                    Parameter: initial_max_streams_bidi (len=2) 512
+                        Type: initial_max_streams_bidi (0x08)
+                        Length: 2
+                        Value: 4200
+                        initial_max_streams_bidi: 512
+                    Parameter: max_idle_timeout (len=4) 30000 ms
+                        Type: max_idle_timeout (0x01)
+                        Length: 4
+                        Value: 80007530
+                        max_idle_timeout: 30000
+                    Parameter: max_udp_payload_size (len=2) 1440
+                        Type: max_udp_payload_size (0x03)
+                        Length: 2
+                        Value: 45a0
+                        max_udp_payload_size: 1440
+                    Parameter: initial_max_streams_uni (len=2) 512
+                        Type: initial_max_streams_uni (0x09)
+                        Length: 2
+                        Value: 4200
+                        initial_max_streams_uni: 512
+                    Parameter: initial_max_stream_data_bidi_remote (len=4) 65635
+                        Type: initial_max_stream_data_bidi_remote (0x06)
+                        Length: 4
+                        Value: 80010063
+                        initial_max_stream_data_bidi_remote: 65635
+                    Parameter: initial_max_stream_data_uni (len=4) 65535
+                        Type: initial_max_stream_data_uni (0x07)
+                        Length: 4
+                        Value: 8000ffff
+                        initial_max_stream_data_uni: 65535
+                    Parameter: active_connection_id_limit (len=1) 8
+                        Type: active_connection_id_limit (0x0e)
+                        Length: 1
+                        Value: 08
+                        Active Connection ID Limit: 8
+                    Parameter: max_ack_delay (len=1) 10
+                        Type: max_ack_delay (0x0b)
+                        Length: 1
+                        Value: 0a
+                        max_ack_delay: 10
+                    Parameter: initial_source_connection_id (len=8)
+                        Type: initial_source_connection_id (0x0f)
+                        Length: 8
+                        Value: 442e87c96a168487
+                        Initial Source Connection ID: 442e87c96a168487
+                    Parameter: loss_bits (len=1)
+                        Type: loss_bits (0x1057)
+                        Length: 1
+                        Value: 01
+                        loss_bits: 1
+                    Parameter: min_ack_delay (len=2) 1000
+                        Type: min_ack_delay (0xff04de1b)
+                        Length: 2
+                        Value: 43e8
+                        min_ack_delay: 1000
+                Extension: psk_key_exchange_modes (len=2)
+                    Type: psk_key_exchange_modes (45)
+                    Length: 2
+                    PSK Key Exchange Modes Length: 1
+                    PSK Key Exchange Mode: PSK with (EC)DHE key establishment (psk_dhe_ke) (1)
+                Extension: early_data (len=0)
+                    Type: early_data (42)
+                    Length: 0
+                Extension: pre_shared_key (len=165)
+                    Type: pre_shared_key (41)
+                    Length: 165
+                    Pre-Shared Key extension
+                [JA4: u13d0310pe_55b375c5d22e_0a3b52e28cea]
+                [JA4_r: u13d0310pe_1301,1302,1303_000a,000d,0029,002a,002b,002d,0033,0039_0804,0403,0401,0201]
+                [JA3 Fullstring: 771,4865-4866-4867,51-0-16-43-13-10-57-45-42-41,23-29,]
+                [JA3: 5e685944fc983af5eabcc813add3dca1]
+QUIC IETF
+    [Packet Length: 741]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..01 .... = Packet Type: 0-RTT (1)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: df421beac34d80af
+    Source Connection ID Length: 8
+    Source Connection ID: 442e87c96a168487
+    Length: 716
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 285d1caf19d838df7752a3a537efb43df4eea976a3e634e5e13a8ca7f5ae738786e8fba06901a43d6ea66b50e060131ff60258c13000903f8b8e2821483436009f680c2f45689b1a4f2c9e04964a124cab785518aed6c2c388821f7f8b9f098e2f5ac94f92c46b3d
+
+No.     Time           Source                Destination           Protocol Length Info
+    459 35.297912685   127.0.0.1             127.0.0.1             QUIC     1759   Handshake, DCID=442e87c96a168487, SCID=d9b483cacaba1c10
+
+Frame 459: 1759 bytes on wire (14072 bits), 1759 bytes captured (14072 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 44364
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 191]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..00 .... = Packet Type: Initial (0)
+    [.... 00.. = Reserved: 0]
+    [.... ..11 = Packet Number Length: 4 bytes (3)]
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 442e87c96a168487
+    Source Connection ID Length: 8
+    Source Connection ID: d9b483cacaba1c10
+    Token Length: 0
+    Length: 165
+    [Packet Number: 70367]
+    Payload [truncated]: 0f7c8e81bd5afa21d2f6b21a9aed96ef2e59a7515df13622cdcfa308149ace04bf16da43753b7752fdc674a3961db69dbeee22f33abf14acbbbfb31deb89a7a452629bb9f0ba692fea1c1f8df9ac783a0c6749da3d0ee691e091f9c1a0fb6e3ad1cbbd3d4b75f656a71c4d9d97
+    ACK
+        Frame Type: ACK (0x0000000000000003)
+        Largest Acknowledged: 80108
+        ACK Delay: 294
+        ACK Range Count: 0
+        First ACK Range: 0
+        ECT(0) Count: 0
+        ECT(1) Count: 1
+        ECN-CE Count: 0
+    CRYPTO
+        Frame Type: CRYPTO (0x0000000000000006)
+        Offset: 0
+        Length: 129
+        Crypto Data
+        TLSv1.3 Record Layer: Handshake Protocol: Server Hello
+            Handshake Protocol: Server Hello
+                Handshake Type: Server Hello (2)
+                Length: 125
+                Version: TLS 1.2 (0x0303)
+                Random: f70b41790ca396dbf4fdbd60743a7a2e92d525e4e0ad946f27e89c060c5da983
+                Session ID Length: 0
+                Cipher Suite: TLS_AES_128_GCM_SHA256 (0x1301)
+                Compression Method: null (0)
+                Extensions Length: 85
+                Extension: supported_versions (len=2) TLS 1.3
+                    Type: supported_versions (43)
+                    Length: 2
+                    Supported Version: TLS 1.3 (0x0304)
+                Extension: key_share (len=69) secp256r1
+                    Type: key_share (51)
+                    Length: 69
+                    Key Share extension
+                Extension: pre_shared_key (len=2)
+                    Type: pre_shared_key (41)
+                    Length: 2
+                    Pre-Shared Key extension
+                [JA3S Fullstring: 771,4865,43-51-41]
+                [JA3S: fcb2d4d0991292272fcb1e464eedfd43]
+QUIC IETF
+    [Packet Length: 226]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 442e87c96a168487
+    Source Connection ID Length: 8
+    Source Connection ID: d9b483cacaba1c10
+    Length: 201
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 10ec4ec660610b7c94eee6bea085b46cbdb125ded036903fb8b07f0842fa349baaf13bff664adb017d3bb01fa970e3e4dedc177e2e3087976bbfffe4f26be4082d13c4624916eb6f9f0a4a9ff714caa7d9336e0e0ce1e92233508d778ad67a3bfaa98e670e2870a6
+QUIC IETF
+    [Packet Length: 835]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: 442e87c96a168487
+    Source Connection ID Length: 8
+    Source Connection ID: d9b483cacaba1c10
+    Length: 810
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 56e8053540680caa3ded61150cd7d27e260cb4837fba27b28006e1e88cbddf0b905c503826820e5e9fd1d9024d5911ad366a896cfc671e1881ada10886ec1ebb86fb005364be89155b41a7063376a9f000b1d2f3ede480ce7de50587317ec92f09dd9264e076000d
+QUIC IETF
+    [Expert Info (Note/Protocol): (Random) padding data appended to the datagram]
+
+No.     Time           Source                Destination           Protocol Length Info
+    460 35.297992482   127.0.0.1             127.0.0.1             QUIC     1482   Protected Payload (KP0), DCID=442e87c96a168487
+
+Frame 460: 1482 bytes on wire (11856 bits), 1482 bytes captured (11856 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 4433, Dst Port: 44364
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 1440]
+    QUIC Short Header DCID=442e87c96a168487
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload [truncated]: 085547a2e2e87511c4ffaf1897cf3af0425b36fe96031ec44cbff72992091434b2da86747beba9706b66484a31e950c045f03643f691ec391a7e5eb37a2ce7a2bad70add1b9069ae3fe6b2f63a8d8697625e7ba49d31696623a0596ffae5202230fd12ccfd323241
+
+No.     Time           Source                Destination           Protocol Length Info
+    463 35.300008136   127.0.0.1             127.0.0.1             QUIC     100    Handshake, DCID=d9b483cacaba1c10, SCID=442e87c96a168487
+
+Frame 463: 100 bytes on wire (800 bits), 100 bytes captured (800 bits) on interface lo, id 0
+Ethernet II, Src: 00:00:00_00:00:00 (00:00:00:00:00:00), Dst: 00:00:00_00:00:00 (00:00:00:00:00:00)
+Internet Protocol Version 4, Src: 127.0.0.1, Dst: 127.0.0.1
+User Datagram Protocol, Src Port: 44364, Dst Port: 4433
+QUIC IETF
+    QUIC Connection information
+    [Packet Length: 58]
+    1... .... = Header Form: Long Header (1)
+    .1.. .... = Fixed Bit: True
+    ..10 .... = Packet Type: Handshake (2)
+    Version: 1 (0x00000001)
+    Destination Connection ID Length: 8
+    Destination Connection ID: d9b483cacaba1c10
+    Source Connection ID Length: 8
+    Source Connection ID: 442e87c96a168487
+    Length: 33
+    [Expert Info (Warning/Decryption): Failed to create decryption context: Secrets are not available]
+    Remaining Payload: 841e9c147c1d0433072d86908963fea48812a316d038cc0cf5e8aec2595bd7c77c
